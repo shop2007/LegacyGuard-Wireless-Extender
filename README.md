@@ -1,6 +1,6 @@
-# PIR Repeater System (Master-Slave Alarm System)
+# PIR/Sensors Wireless Extender (Master to 4 Slave sensors)
 
-Un sistema di allarme / ripetitore di presenza distribuito basato su architettura **Master-Slave** in rete Wi-Fi locale. Il sistema consente a una scheda centrale (Master) di monitorare lo stato di fino a 4 nodi periferici (Slave con sensori PIR) e attivare un relè in caso di allarme rilevato.
+Un sistema di estensione wireless per collegare (WiFi) ulteriori 4 sensori PIR oppure contatti n.o., ad una centrale cablata. Basato su architettura **Master-Slave** , tramite una rete Wi-Fi locale, consente ad una scheda centrale (Master) di monitorare lo stato di fino a 4 nodi periferici (Slave con sensori PIR) e attivare un relè in caso di allarme rilevato.
 E' utile per aggiungere sensori PIR a sistemi di allarme cablati di vecchia generazione, senza dover aggiungere 
 cablaggi. 
 
@@ -24,4 +24,4 @@ cablaggi.
 | IP: 192.168.4.2  |                           | IP: 192.168.4.x  |
 +------------------+                           +------------------+
 
-![SystemArchitecture.jpg](img/SystemArchitecture.jpg) 
+![SystemArchitecture](img/SystemArchitecture.jpg) 
