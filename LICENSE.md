@@ -1,7 +1,7 @@
 # Terms of License & Commercial Distribution
 
 ### 1. Version Demo / Evaluation (Gratuita)
-* I sorgenti, gli schemi e i binari forniti in questa repository sono distribuiti a solo scopo di test e valutazione.
+* I sorgenti, gli schemi e i binari forniti in questa repository sono distribuiti per consentire la replicazione del progetto in modalità DIY.
 * Il firmware in versione Demo contiene una limitazione temporale integrata: **il sistema resta operativo per 1 ora a partire dall'ultimo reset hardware/software**.
 * Trascorsa 1 ora, il sistema arresta le sue funzioni fino al successivo reset.
 * È vietata la rimozione o la bypass delle limitazioni temporali presenti nel codice sorgente.
