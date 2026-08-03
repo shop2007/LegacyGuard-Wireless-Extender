@@ -64,7 +64,7 @@ L'accesso alla console di amministrazione avviene tramite **Seriale USB (115200 
 3. Aprire il browser all'indirizzo `http://192.168.4.1/update` (HTTP, non HTTPS).[cite: 2]
 4. Inserire le credenziali OTA (`admin` / `Pautax2006`).[cite: 2]
 5. Caricare il file `.bin` compilato e attendere il riavvio automatico.[cite: 2]
-
+p.s. maggiori dettagli sulla programmazione e OTA sono disponibili al paragrafo 8. (Riprodurre il progetto: cosa serve)
 ---
 
 ## 3. Modulo Slave PIR (`ESP8266 / Wemos D1 mini`)[cite: 1, 2]
@@ -234,8 +234,8 @@ Durante l'OTA il master entra in **modalità manutenzione** (il polling/le funzi
 
 ```
 4MASTER32/
-├── 4MASTER32_startup_02_88888888.ino    # sketch di primo avvio / recovery (OTA + seriale)
-├── 4MASTER32_xxxxxxx.bin              # firmware vero e proprio  
+├── 4MASTER32_startup_03_88888888.ino      # sketch di primo avvio / recovery (OTA + seriale)
+├── 4MASTER32_displ_pir_wdog_100.ino.bin   # firmware vero e proprio  
 ```
 
 ### 7.1 Sketch di primo avvio (`4MASTER32_startup_02_88888888.ino`)
