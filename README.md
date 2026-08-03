@@ -1,6 +1,7 @@
-# PIR/Sensors Wireless Extender (Master to 4 Slave sensors)
+#  LegacyGuard Wireless Extender (Master to 4 Slave PIR/Sensors)
 
-Un sistema di estensione wireless per collegare (WiFi) ulteriori 4 sensori PIR oppure contatti n.o., ad una centrale cablata. Basato su architettura **Master-Slave** , tramite una rete Wi-Fi locale, consente ad una scheda centrale (Master) di monitorare lo stato di fino a 4 nodi periferici (Slave cablati localmente con sensori PIR ed alimentati localmente) e attivare un relè in caso di allarme rilevato.
+Un sistema di estensione wireless per collegare (WiFi) ulteriori 4 sensori PIR oppure contatti n.o., ad una centrale cablata. 
+Basato su architettura **Master-Slave** , tramite una rete Wi-Fi locale, consente ad una scheda centrale (Master) di monitorare lo stato di fino a 4 nodi periferici (Slave cablati localmente con sensori PIR ed alimentati localmente) e attivare un relè in caso di allarme rilevato.
 E' utile per aggiungere sensori PIR a sistemi di allarme cablati di vecchia generazione, senza dover aggiungere 
 cablaggi. 
 
