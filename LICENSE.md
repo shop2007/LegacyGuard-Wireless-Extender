@@ -13,6 +13,11 @@ Per sbloccare il funzionamento illimitato (senza time-out) e ricevere i firmware
   * Firmware senza limitazioni temporali.
   * Accesso agli aggiornamenti e alle nuove release del firmware.
   * Supporto via email per la configurazione iniziale.
+  
+**NOTA BENE** questo è un progetto sperimentale, nato per studio e sperimentazione personale, e non un prodotto commerciale collaudato. Non viene fornita alcuna garanzia sul suo corretto funzionamento: va inteso come un progetto didattico per maker, non come un sistema di sicurezza certificato. Chi lo riproduce lo fa quindi a proprio rischio, esonerando l'autore da qualsiasi responsabilità per falsi allarmi, malfunzionamenti o altri problemi che possano derivarne — riproducendo il progetto si dichiara di essere consapevole di questi limiti e di accettarne rischi e conseguenze.
+
+
+  
 
 ### 3. Come richiedere la Licenza Full
 Per fare la donazione o richiedere informazioni, inviare una mail a: **[register@realmeteo.com]** indicando:
