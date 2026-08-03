@@ -8,14 +8,14 @@
 
 ### 2. Licenza Full / Produzione
 Per sbloccare il funzionamento illimitato (senza time-out) e ricevere i firmware aggiornati per uso continuo:
-* È richiesto una unica donazione di **€25,00 a sistema** a favore della Associazione Realmeteo.
+* È richiesto una unica donazione di **€25,00 a sistema** a favore della Associazione Realmeteo tramite paypal all'indirizzo indicato di seguito con la casuale "Donazione Liberale Associazione realMeteo per ricevere il firmware LegacyGuard Wireless Extender della scheda master, sbloccato".
 * La licenza Full include:
   * Firmware senza limitazioni temporali.
   * Accesso agli aggiornamenti e alle nuove release del firmware.
   * Supporto via email per la configurazione iniziale.
 
 ### 3. Come richiedere la Licenza Full
-Per acquistare la licenza Full o richiedere informazioni, inviare una mail a: **[register@realmeteo.com]** indicando:
+Per fare la donazione o richiedere informazioni, inviare una mail a: **[register@realmeteo.com]** indicando:
 - il MAC address del modulo MASTER (rilevabile da seriale o da telnet con il comando **m** e poi **6**)
 - il nome della rete wifi ssid desiderato (esempio WIND-FFER44)
 - la password wifi desiderata
