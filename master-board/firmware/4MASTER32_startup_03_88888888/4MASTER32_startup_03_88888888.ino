@@ -142,6 +142,11 @@ void handleOtaUpdateUpload() {
     Serial.print("OTA: File = ");
     Serial.println(upload.filename);
 
+    // Disabilita il task watchdog per tutta la durata dell'upload/scrittura flash:
+    // handleClient() può restare bloccato a lungo durante la ricezione dei chunk
+    // e la scrittura su flash, con rischio di reset a metà OTA.
+    esp_task_wdt_delete(NULL);
+
     if (Update.begin(UPDATE_SIZE_UNKNOWN)) {
       otaUpdateSessionOpen = true;
     } else {
@@ -190,6 +195,7 @@ void handleOtaUpdateUpload() {
       otaLastStatus = "Errore finalizzazione OTA.";
       Update.printError(Serial);
     }
+    initTaskWatchdog(); // riattiva il watchdog: upload terminato (successo o errore)
     return;
   }
 
@@ -200,6 +206,7 @@ void handleOtaUpdateUpload() {
     otaLastStatus = "Upload OTA interrotto.";
     Update.abort();
     Serial.println("OTA: Upload interrotto.");
+    initTaskWatchdog(); // riattiva il watchdog anche in caso di interruzione
   }
 }
 
