@@ -1,203 +1,205 @@
-# Specifiche Generali di Sistema — LegacyGuard Wireless Extender 
+# General System Specifications — LegacyGuard Wireless Extender
 
-Questo documento descrive nel dettaglio l'architettura, le componenti, i protocolli di comunicazione e le modalità operative del sistema di collegamento wireless per una centrale antifurto legacy (wired)
-
----
-
-## 1. Architettura di Rete e Comunicazione[cite: 2]
-
-* **Tipologia Rete**: Wi-Fi Standard 802.11b (configurato per massimizzare la portata e la stabilità del segnale senza sleep radio).[cite: 2]
-* **Topologia**: Stella (Master al centro, Slave periferici).[cite: 2]
-* **Indirizzamento IP**:[cite: 2]
-  * **Master**: `192.168.4.1`[cite: 2]
-  * **Slave ID 2**: `192.168.4.2`[cite: 2]
-  * **Slave ID 3**: `192.168.4.3`[cite: 2]
-  * **Slave ID 4**: `192.168.4.4`[cite: 2]
-  * **Slave ID 5**: `192.168.4.5`[cite: 2]
-* **Porta del Server TCP Slave**: `80` (utilizzata dal Master per interrogare lo stato degli slave).[cite: 1, 2]
-* **Potenza di Trasmissione TX (Slave)**: 20.5 dBm.[cite: 2]
+This document describes in detail the architecture, components, communication protocols, and operating modes of the wireless link system for a legacy (wired) alarm control panel.
 
 ---
 
-## 2. Modulo Master (`4MASTER32_displ_pir_wdog_70`)[cite: 2]
+## 1. Network Architecture and Communication
 
-Il nodo Master (basato su ESP32) coordina la rete, interroga periodicamente gli slave e gestisce la logica degli allarmi.[cite: 2]
-
-### 2.1 Logica di Allarme e Relè[cite: 2]
-* **Stati rilevati dallo Slave**:[cite: 2]
-  * `STA100`: Slave presente, nessun allarme.[cite: 2]
-  * `STA113`: Slave presente, allarme rilevato (sensore PIR attivato).[cite: 2]
-* **Comportamento Relè**: Se almeno uno slave risponde con `STA113`, l'uscita a relè viene attivata. Il relè resta eccitato per un tempo minimo di **2 secondi**, anche se la condizione di allarme rientra prima.[cite: 2]
-* **Mappatura Conservativa**: Un nodo visto anche solo una volta viene memorizzato come "Presente". Per essere dichiarato "Assente", deve fallire multiple risposte consecutive al polling.[cite: 2]
-
-### 2.2 Display OLED Master[cite: 2]
-La matrice del display mostra lo stato dei 4 nodi in forma sintetica:[cite: 2]
-* `A2`: Slave 2 in Allarme.[cite: 2]
-* `N3`: Slave 3 Normale / Senza allarme.[cite: 2]
-* `..`: Slave Non rilevato / Assente.[cite: 2]
-
-### 2.3 Indicatori LED Master[cite: 2]
-* **LED di Bordo**: Alterna stato ad ogni ciclo completo di polling (indicatore di attività).[cite: 2]
-* **LED Ausiliario (GPIO 9)**: Si illumina durante le fasi di scan e mappatura degli slave.[cite: 2]
-
-### 2.4 Ingressi di Servizio (Ponticelli Master)[cite: 2]
-* **GPIO 4 ➔ GND**: Salta il ritardo di riscaldamento iniziale di 90 secondi.[cite: 2]
-* **GPIO 10 ➔ GND**: Forza la rimappatura dinamica degli slave ad ogni ciclo.[cite: 2]
-
-### 2.5 Console Diagnostica (Seriale & Telnet)[cite: 2]
-L'accesso alla console di amministrazione avviene tramite **Seriale USB (115200 baud)** oppure via **Telnet**:[cite: 2]
-* **Accesso Telnet**: `telnet 192.168.4.1 2323`[cite: 2]
-* **Credenziali Console**: User: `admin` | Password: `Pautax2006`[cite: 2]
-* **Menu Diagnostico (Comando `m` o `M`)**:[cite: 2]
-  * `0`: Reset hardware della scheda.[cite: 2]
-  * `1`: Stampa il nome del file sorgente firmware.[cite: 2]
-  * `2`: Stampa statistiche dettagliate (allarmi, chiamate OK, chiamate FALLITE per ogni slave).[cite: 2]
-  * `3`: Abilita/Disabilita diagnostica estesa (tracing funzioni).[cite: 2]
-  * `4`: Avvia scan continuo di presenza/assenza (uscita con `q`).[cite: 2]
-  * `5`: Attiva la modalità aggiornamento OTA via Web.[cite: 2]
-  * `6`: Stampa Indirizzo MAC.[cite: 2]
-  * `99`: Uscita dal menu.[cite: 2]
-
-### 2.6 Aggiornamento Firmware Web OTA[cite: 2]
-1. Aprire la sessione Telnet ed entrare nel menu diagnostico (`m`).[cite: 2]
-2. Selezionare l'opzione `5` per abilitare l'OTA (il Master entra in modalità manutenzione).[cite: 2]
-3. Aprire il browser all'indirizzo `http://192.168.4.1/update` (HTTP, non HTTPS).[cite: 2]
-4. Inserire le credenziali OTA (`admin` / `Pautax2006`).[cite: 2]
-5. Caricare il file `.bin` compilato e attendere il riavvio automatico.[cite: 2]
-p.s. maggiori dettagli sulla programmazione e OTA sono disponibili al paragrafo 8. (Riprodurre il progetto: cosa serve)
----
-
-## 3. Modulo Slave PIR (`ESP8266 / Wemos D1 mini`)[cite: 1, 2]
-
-Ogni nodo Slave acquisisce il segnale dal sensore PIR e risponde alle chiamate TCP del Master.[cite: 2]
-
-### 3.1 Funzionalità Principali[cite: 2]
-* **Rilevamento Allarme Memorizzato (Latch)**: Quando il PIR rileva un'intrusione, il flag di allarme viene alzato e memorizzato (latched)[cite: 1]. **Importante**: il semplice polling da parte del Master NON azzera lo stato di allarme[cite: 1].
-* **Reset Allarme via Comando `STA155`**: Lo stato di allarme memorizzato (e il relativo LED diagnostico) si azzera **esclusivamente** quando lo Slave riceve il comando specifico con codice `155` / `STA155` (inviato via TCP o Seriale)[cite: 1].
-* **Watchdog Software**: Timer a 8 secondi con auto-reset della scheda in caso di blocco del codice[cite: 2].
-* **Risposta TCP**: Invia lo stato (`STA100` in assenza di allarme, `STA113` in presenza di allarme latched), il numero progressivo di chiamata (`CALL`) e la potenza del segnale Wi-Fi (`RADIO` / `RSSI`)[cite: 1, 2].
-
-### 3.2 Display OLED Slave[cite: 2]
-* **Riga 1**: ID Slave (`SLAVE_ID`) e stato connessione Wi-Fi (`CONN` / `NOCN`)[cite: 2].
-* **Riga 2**: Stato Allarme (`OK` / `AL`)[cite: 2].
-* *Fase di avvio*: Mostra il countdown dei secondi rimanenti al riscaldamento del sensore PIR[cite: 2].
-
-### 3.3 Codici e Funzionalità LED Slave[cite: 1, 2]
-* **LED_BUILTIN** (attivo LOW):
-  * **Toggle (1 “blink” di stato)**: Inverte il proprio stato ad ogni risposta trasmessa al Master (sia via TCP sia via comando seriale `?`). Serve da indicatore di attività/polling.
-  * **Doppio blink (2 blink) durante riscaldamento PIR**: Nella fase di countdown di 90 s (se non saltata tramite D6→GND) esegue una sequenza fissa di **2 lampeggi rapidi** per ogni secondo di attesa:
-    * ON 120 ms → OFF 120 ms → ON 120 ms → ripristino stato precedente + pausa 640 ms.
-    * La sequenza è ripetuta per ogni secondo del countdown (funzione `blinkWarmupDouble()`).
-  * Non sono implementati pattern a 3 o 4 blink; il LED_BUILTIN usa esclusivamente il toggle di attività e il doppio blink di warmup.
-* **LED Diagnostico Allarme (`LED_DIAG_PIN` su D7)**:
-  * **Si accende (HIGH)**: Non appena il PIR rileva un allarme e alza il flag interno[cite: 1].
-  * **Rimane ACCESO**: Anche durante i normali cicli di polling/interrogazione, finché l'allarme resta memorizzato[cite: 1].
-  * **Si spegne (LOW)**: Soltanto dopo la ricezione esplicita del comando di reset (inviata dal MASTER) `STA155`[cite: 1].
-
-### 3.4 Ingressi Hardware e Interfacce Slave[cite: 1, 2]
-* **Pin D6 (`SkipDelayPir`)**: Pull-up interno. Se ponticellato a GND all'avvio, salta il countdown di 90s del PIR (utilizzato per debug/test)[cite: 1, 2].
-* **Pin D5 (`InputPir`)**: Ingresso del sensore PIR con pull-up interno. Supporta la configurazione con optocoppiatore/contatto normalmente chiuso (`PirReverse = false` o `true` in base alla logica del sensore)[cite: 1, 2].
-* **Pin D7 (`LED_DIAG_PIN`)**: Uscita attiva alta collegata all'anodo del LED diagnostico allarme (con opportuna resistenza di limitazione verso GND)[cite: 1].
-* **Interfaccia Seriale USB**:
-  * Inviando `?` simula una chiamata di polling fornendo la risposta di stato[cite: 1].
-  * Inviando `155` o `STA155` forza il reset immediato dell'allarme latched e lo spegnimento del LED diagnostico[cite: 1].# LegacyGuard Wireless Extender 
-
-** Scheda Master di rete per monitoraggio 4 schede slave connesse a sensori tipo PIR, Doppia tecnologia, interruttori magnetici normalmente chiusi.**
-
-La scheda **master**, basata su **ESP32-C3**, gestisce una rete locale WiFi proprietaria (Access Point) composta da un master e fino a **4 slave remoti** (espandibile a 8 con modifica firmware). Il master interroga periodicamente gli slave, ne acquisisce lo stato operativo (presenza / allarme) e pilota un'uscita a relè in caso di allarme. Lo stato dei 4 slave viene mostrato in tempo reale su un display OLED.
-
-> Questo documento descrive l'hardware, il protocollo, il firmware e la procedura per riprodurre o modificare il progetto. 
+* **Network Type**: Wi-Fi Standard 802.11b (configured to maximize range and signal stability without radio sleep).
+* **Topology**: Star (Master at the center, peripheral Slaves).
+* **IP Addressing**:
+  * **Master**: `192.168.4.1`
+  * **Slave ID 2**: `192.168.4.2`
+  * **Slave ID 3**: `192.168.4.3`
+  * **Slave ID 4**: `192.168.4.4`
+  * **Slave ID 5**: `192.168.4.5`
+* **Slave TCP Server Port**: `80` (used by the Master to query the status of the slaves).
+* **TX Transmission Power (Slave)**: 20.5 dBm.
 
 ---
 
-## 1. Panoramica
+## 2. Master Module (`4MASTER32_displ_pir_wdog_70`)
+
+The Master node (based on ESP32) coordinates the network, periodically queries the slaves, and manages the alarm logic.
+
+### 2.1 Alarm Logic and Relay
+* **States detected by the Slave**:
+  * `STA100`: Slave present, no alarm.
+  * `STA113`: Slave present, alarm detected (PIR sensor activated).
+* **Relay Behavior**: If at least one slave responds with `STA113`, the relay output is activated. The relay remains energized for a minimum time of **2 seconds**, even if the alarm condition clears earlier.
+* **Conservative Mapping**: A node seen even only once is memorized as "Present". To be declared "Absent", it must fail multiple consecutive responses to polling.
+
+### 2.2 Master OLED Display
+The display matrix shows the status of the 4 nodes in synthetic form:
+* `A2`: Slave 2 in Alarm.
+* `N3`: Slave 3 Normal / No alarm.
+* `..`: Slave Not detected / Absent.
+
+### 2.3 Master LED Indicators
+* **Edge LED**: Alternates state at each complete polling cycle (activity indicator).
+* **Auxiliary LED (GPIO 9)**: Lights up during slave scan and mapping phases.
+
+### 2.4 Service Inputs (Master Jumpers)
+* **GPIO 4 ➔ GND**: Skips the initial 90-second warm-up delay.
+* **GPIO 10 ➔ GND**: Forces dynamic remapping of the slaves at every cycle.
+
+### 2.5 Diagnostic Console (Serial & Telnet)
+Access to the administration console is via **USB Serial (115200 baud)** or via **Telnet**:
+* **Telnet Access**: `telnet 192.168.4.1 2323`
+* **Console Credentials**: User: `admin` | Password: `Pautax2006`
+* **Diagnostic Menu (Command `m` or `M`)**:
+  * `0`: Hardware reset of the board.
+  * `1`: Prints the source firmware file name.
+  * `2`: Prints detailed statistics (alarms, OK calls, FAILED calls for each slave).
+  * `3`: Enables/Disables extended diagnostics (function tracing).
+  * `4`: Starts continuous presence/absence scan (exit with `q`).
+  * `5`: Activates Web OTA update mode.
+  * `6`: Prints MAC Address.
+  * `99`: Exit from the menu.
+
+### 2.6 Web OTA Firmware Update
+1. Open the Telnet session and enter the diagnostic menu (`m`).
+2. Select option `5` to enable OTA (the Master enters maintenance mode).
+3. Open the browser at the address `http://192.168.4.1/update` (HTTP, not HTTPS).
+4. Enter the OTA credentials (`admin` / `Pautax2006`).
+5. Upload the compiled `.bin` file and wait for the automatic reboot.
+p.s. more details on programming and OTA are available in paragraph 8. (Reproducing the project: what is needed)
+
+---
+
+## 3. Slave PIR Module (`ESP8266 / Wemos D1 mini`)
+
+Each Slave node acquires the signal from the PIR sensor and responds to TCP calls from the Master.
+
+### 3.1 Main Functionalities
+* **Latched Alarm Detection**: When the PIR detects an intrusion, the alarm flag is raised and latched. **Important**: simple polling by the Master does NOT clear the alarm state.
+* **Alarm Reset via Command `STA155`**: The latched alarm state (and the related diagnostic LED) is cleared **exclusively** when the Slave receives the specific command with code `155` / `STA155` (sent via TCP or Serial).
+* **Software Watchdog**: 8-second timer with automatic board reset in case of code freeze.
+* **TCP Response**: Sends the status (`STA100` in the absence of alarm, `STA113` in the presence of latched alarm), the progressive call number (`CALL`), and the Wi-Fi signal strength (`RADIO` / `RSSI`).
+
+### 3.2 Slave OLED Display
+* **Line 1**: Slave ID (`SLAVE_ID`) and Wi-Fi connection status (`CONN` / `NOCN`).
+* **Line 2**: Alarm status (`OK` / `AL`).
+* *Startup phase*: Shows the countdown of remaining seconds for PIR sensor warm-up.
+
+### 3.3 Slave LED Codes and Functionalities
+* **LED_BUILTIN** (active LOW):
+  * **Toggle (1 “status blink”)**: Inverts its state at every response transmitted to the Master (both via TCP and via serial command `?`). Serves as an activity/polling indicator.
+  * **Double blink (2 blinks) during PIR warm-up**: In the 90 s countdown phase (if not skipped via D6→GND) it performs a fixed sequence of **2 rapid flashes** for each second of waiting:
+    * ON 120 ms → OFF 120 ms → ON 120 ms → restore previous state + 640 ms pause.
+    * The sequence is repeated for each second of the countdown (function `blinkWarmupDouble()`).
+  * Patterns with 3 or 4 blinks are not implemented; the LED_BUILTIN uses exclusively the activity toggle and the warm-up double blink.
+* **Alarm Diagnostic LED (`LED_DIAG_PIN` on D7)**:
+  * **Turns on (HIGH)**: As soon as the PIR detects an alarm and raises the internal flag.
+  * **Remains ON**: Even during normal polling/interrogation cycles, as long as the alarm remains latched.
+  * **Turns off (LOW)**: Only after explicit reception of the reset command (sent by the MASTER) `STA155`.
+
+### 3.4 Slave Hardware Inputs and Interfaces
+* **Pin D6 (`SkipDelayPir`)**: Internal pull-up. If jumpered to GND at startup, skips the 90 s PIR countdown (used for debug/test).
+* **Pin D5 (`InputPir`)**: PIR sensor input with internal pull-up. Supports configuration with optocoupler/normally closed contact (`PirReverse = false` or `true` depending on the sensor logic).
+* **Pin D7 (`LED_DIAG_PIN`)**: Active-high output connected to the anode of the alarm diagnostic LED (with appropriate current-limiting resistor to GND).
+* **USB Serial Interface**:
+  * Sending `?` simulates a polling call providing the status response.
+  * Sending `155` or `STA155` forces the immediate reset of the latched alarm and turns off the diagnostic LED.
+
+# LegacyGuard Wireless Extender
+
+**Network Master board for monitoring 4 slave boards connected to PIR-type sensors, Dual technology, normally closed magnetic switches.**
+
+The **master** board, based on **ESP32-C3**, manages a proprietary local WiFi network (Access Point) consisting of one master and up to **4 remote slaves** (expandable to 8 with firmware modification). The master periodically queries the slaves, acquires their operational status (presence / alarm), and drives a relay output in case of alarm. The status of the 4 slaves is shown in real time on an OLED display.
+
+> This document describes the hardware, protocol, firmware, and the procedure to reproduce or modify the project.
+
+---
+
+## 1. Overview
 
 | | |
 |---|---|
 | **MCU** | ESP32-C3 (API core: `WiFi.h`, `WebServer.h`, `esp_task_wdt.h`, `Update.h`) |
-| **Ruolo** | Master di rete: polling di fino a 4 slave, gestione allarme, display, OTA |
-| **Rete** | Access Point WiFi proprio (non serve avere il router WiFi acceso) |
-| **Output** | Relè di allarme, display OLED, 2 LED di stato |
-| **Aggiornamento** | OTA via interfaccia web, protetta da autenticazione |
-| **Diagnostica** | Console seriale (115200 baud) o Telnet, con menu a comandi |
+| **Role** | Network Master: polling of up to 4 slaves, alarm management, display, OTA |
+| **Network** | Own WiFi Access Point (no need for the WiFi router to be on) |
+| **Output** | Alarm relay, OLED display, 2 status LEDs |
+| **Update** | OTA via web interface, protected by authentication |
+| **Diagnostics** | Serial console (115200 baud) or Telnet, with command menu |
 
 ---
 
-## 2. Architettura di rete
+## 2. Network Architecture
 
-- Il master crea un proprio **Access Point WiFi** (SoftAP), a cui slave e postazione di diagnostica si collegano.
-- Rete gestita internamente su un range statico (IP master fisso: `192.168.4.1`).
-- Ogni slave ha un ID (`SLAVE_ID`) compreso, secondo la numerazione del progetto, tra 2 e 5 (il master ha ID 1, fisso, così master e slave non collidono sulla stessa rete).
-- Ogni slave, quando interrogato, trasmette al master uno stato sintetico ricavato da un codice interno:
-  - stato (display) **A** (allarme) ↔ codice reale `STA113`
-  - stato (display) **N** (normale) ↔ codice reale `STA100`
-  - stato (display) **..** ↔ slave assente / non rilevato
-
----
-
-## 3. Logica di funzionamento del master
-
-- Il master interroga (poll) ciclicamente tutti gli slave configurati.
-- **Se almeno uno slave risulta in allarme**, il relè di uscita si attiva.
-- **Isteresi minima**: una volta attivato, il relè resta attivo per **almeno 2 secondi**, anche se l'allarme rientra prima.
-- **Rilevamento presenza slave (mappatura conservativa)**, pensato per reti radio non ottimali (distanza, segnale debole):
-  - in fase di mappatura, uno slave visto anche una sola volta viene considerato presente;
-  - in polling normale, uno slave viene dichiarato assente solo dopo **più mancate risposte consecutive** (non alla prima).
+- The master creates its own **WiFi Access Point** (SoftAP), to which slaves and the diagnostic station connect.
+- Internally managed network on a static range (fixed master IP: `192.168.4.1`).
+- Each slave has an ID (`SLAVE_ID`) ranging, according to the project numbering, from 2 to 5 (the master has fixed ID 1, so that master and slaves do not collide on the same network).
+- Each slave, when queried, transmits to the master a synthetic status derived from an internal code:
+  - status (display) **A** (alarm) ↔ real code `STA113`
+  - status (display) **N** (normal) ↔ real code `STA100`
+  - status (display) **..** ↔ slave absent / not detected
 
 ---
 
-## 4. Interfaccia utente sulla scheda
+## 3. Master Operating Logic
 
-### 4.1 Display OLED
-Mostra in forma compatta lo stato dei 4 slave, due caratteri per slave:
+- The master cyclically queries (polls) all configured slaves.
+- **If at least one slave is in alarm**, the output relay is activated.
+- **Minimum hysteresis**: once activated, the relay remains active for **at least 2 seconds**, even if the alarm clears earlier.
+- **Slave presence detection (conservative mapping)**, designed for non-optimal radio networks (distance, weak signal):
+  - in the mapping phase, a slave seen even only once is considered present;
+  - in normal polling, a slave is declared absent only after **multiple consecutive missed responses** (not on the first one).
 
-| Codice | Significato |
+---
+
+## 4. User Interface on the Board
+
+### 4.1 OLED Display
+Shows the status of the 4 slaves in compact form, two characters per slave:
+
+| Code | Meaning |
 |---|---|
-| `A2` | slave 2 in allarme |
-| `N3` | slave 3 presente, nessun allarme |
-| `..` | slave non presente / non rilevato |
+| `A2` | slave 2 in alarm |
+| `N3` | slave 3 present, no alarm |
+| `..` | slave not present / not detected |
 
-### 4.2 LED
-- **LED di bordo (built-in)**: normale funzionamento del master, cambia stato a ogni ciclo completo di polling (utile per verificare "a colpo d'occhio" che il firmware non sia bloccato).
-- **LED ausiliario (GPIO 9)**: acceso durante la mappatura/scan degli slave, spento a fine operazione.
+### 4.2 LEDs
+- **Edge LED (built-in)**: normal master operation, changes state at every complete polling cycle (useful to verify "at a glance" that the firmware is not frozen).
+- **Auxiliary LED (GPIO 9)**: on during slave mapping/scan, off at the end of the operation.
 
-### 4.3 Ponticelli di servizio (jumper verso GND)
-| Pin  CHIP ESP32 C3  | Funzione |
+### 4.3 Service Jumpers (jumper to GND)
+| ESP32-C3 CHIP Pin | Function |
 |---|---|
-| GPIO 4 → GND    | salta il ritardo iniziale di avvio (90 s) |
-| GPIO 10 → GND   | forza la rimappatura completa degli slave a ogni ciclo, solo per debug |
+| GPIO 4 → GND    | skips the initial startup delay (90 s) |
+| GPIO 10 → GND   | forces complete remapping of the slaves at every cycle, for debug only |
 
 ---
 
-## 5. Accesso diagnostico
+## 5. Diagnostic Access
 
-Il master espone una console diagnostica raggiungibile in due modi:
+The master exposes a diagnostic console reachable in two ways:
 
-- **Seriale USB**, 115200 baud
-- **Telnet**, sulla rete WiFi del master, porta di default `2323`
+- **USB Serial**, 115200 baud
+- **Telnet**, on the master's WiFi network, default port `2323`
 
-Comando di connessione tipico da lanciare da console (finestra CMD):
+Typical connection command to launch from console (CMD window):
 ```
 telnet 192.168.4.1 2323
 ```
 
-L'accesso richiede username/password di console. Per aprire il menu diagnostico, dalla sessione (seriale o Telnet) inviare il carattere **`m`** .
+Access requires console username/password. To open the diagnostic menu, from the session (serial or Telnet) send the character **`m`**.
 
+### Diagnostic Menu — Available Commands
 
-### Menu diagnostico — comandi disponibili
-
-| Comando | Funzione |
+| Command | Function |
 |---|---|
-| `0` | Reset hardware della scheda |
-| `1` | Visualizza nome file sorgente del firmware in esecuzione |
-| `2` | Statistiche per slave: n° allarmi, letture OK, letture fallite (`ALRM`, `OK`, `NON_OK`) utile per valutare la bontà della connessione WiFi a lungo termine |
-| `3` | Abilita/disabilita diagnostica estesa (tracing dettagliato ingresso/uscita funzioni per lo sviluppatore) |
-| `4` | Scan continuo slave presenti/assenti (termina con `q`) |
-| `5` | Abilita/disabilita modalità OTA via web |
-| `6` | Stampa MAC address della scheda |
-| `99` | Esce dal menu |
+| `0` | Hardware reset of the board |
+| `1` | Displays the source file name of the running firmware |
+| `2` | Statistics per slave: number of alarms, OK readings, failed readings (`ALRM`, `OK`, `NON_OK`) useful for evaluating the quality of the WiFi connection over the long term |
+| `3` | Enables/disables extended diagnostics (detailed function entry/exit tracing for the developer) |
+| `4` | Continuous scan of present/absent slaves (ends with `q`) |
+| `5` | Enables/disables web OTA mode |
+| `6` | Prints the board MAC address |
+| `99` | Exits the menu |
 
-Esempio di output del comando `2`: (n. allarmi, letture presenza in rete ok, letture presenza in rete fallite)
+Example output of command `2`: (n. alarms, presence readings on network ok, presence readings on network failed)
 ```
 Slave2 ALRM=3 OK=6403 NON_OK=2
 Slave3 ALRM=0 OK=0    NON_OK=6405
@@ -207,68 +209,68 @@ Slave5 ALRM=0 OK=0    NON_OK=6405
 
 ---
 
-## 6. Aggiornamento firmware via OTA
+## 6. Firmware Update via OTA
 
-Il firmware include un web server OTA (`WebServer` + libreria `Update.h`) sempre disponibile sull'IP del master, protetto da autenticazione HTTP Basic.
+The firmware includes an OTA web server (`WebServer` + `Update.h` library) always available on the master's IP, protected by HTTP Basic authentication.
 
-**Procedura completa:**
-1. Scaricare il file (`.bin`) aggiornato .
-2. Salvarlo in una cartella nota .
-3. Scollegare il PC dalla rete del router e collegarlo alla rete WiFi `88888888` pass `88888888`` .
-4. Aprire una sessione Telnet verso `192.168.4.1:2323`.  (Da prompt CMD scrivere "telnet 192.168.4.1 2323")
-5. Autenticarsi con user 'admin' e password Pautax2006.
-6. Inviare `m` per aprire il menu diagnostico.
-7. Inviare `5` per attivare la modalità OTA.   ??????? verificare procedura
-8. Aprire nel browser `http://192.168.4.1/update` (**http**, non https).
-9. Inserire le credenziali OTA (username admin, password Pautax2006).
-10. Sulla pagina web con sfoglia, cercare su disco il file `.bin`.
-11. Attendere il completamento dell'upload.
-12. Attendere il riavvio automatico della scheda.
-13. Verificare il corretto funzionamento del nuovo firmware.
+**Complete procedure:**
+1. Download the updated (`.bin`) file.
+2. Save it in a known folder.
+3. Disconnect the PC from the router network and connect it to the WiFi network `88888888` pass `88888888`.
+4. Open a Telnet session to `192.168.4.1:2323`. (From CMD prompt write "telnet 192.168.4.1 2323")
+5. Authenticate with user 'admin' and password Pautax2006.
+6. Send `m` to open the diagnostic menu.
+7. Send `5` to activate OTA mode.   ??????? verify procedure
+8. Open in the browser `http://192.168.4.1/update` (**http**, not https).
+9. Enter the OTA credentials (username admin, password Pautax2006).
+10. On the web page with browse, search on disk for the `.bin` file.
+11. Wait for the upload to complete.
+12. Wait for the automatic reboot of the board.
+13. Verify the correct operation of the new firmware.
 
-Durante l'OTA il master entra in **modalità manutenzione** (il polling/le funzioni normali sono sospese).
+During OTA the master enters **maintenance mode** (polling/normal functions are suspended).
 
 ---
 
-## 7. Struttura firmware e file di progetto
+## 7. Firmware Structure and Project Files
 
 ```
 4MASTER32/
-├── 4MASTER32_startup_03_88888888.ino      # sketch di primo avvio / recovery (OTA + seriale)
-├── 4MASTER32_displ_pir_wdog_100.ino.bin   # firmware vero e proprio  
+├── 4MASTER32_startup_03_88888888.ino      # first boot / recovery sketch (OTA + serial)
+├── 4MASTER32_displ_pir_wdog_100.ino.bin   # actual firmware  
 ```
 
-### 7.1 Sketch di primo avvio (`4MASTER32_startup_02_88888888.ino`)
-Lo sketch *startup* è una **variante minimale di primo avvio / recovery**: monta solo l'Access Point WiFi, il web server OTA e il watchdog hardware, stampando periodicamente sulla seriale un messaggio di invito ad aggiornare il firmware. **Non contiene** la logica di polling degli slave, display e relè descritta nel manuale: è pensato per flashare facilmenete una scheda "vergine" (o recuperare una scheda bloccata) e portarla via OTA al firmware applicativo completo, senza dover ricollegarla via USB.
+### 7.1 First Boot Sketch (`4MASTER32_startup_02_88888888.ino`)
+The *startup* sketch is a **minimal first boot / recovery variant**: it only mounts the WiFi Access Point, the OTA web server, and the hardware watchdog, periodically printing on the serial a message inviting to update the firmware. **It does not contain** the slave polling logic, display, and relay described in the manual: it is designed to easily flash a "virgin" board (or recover a locked board) and bring it via OTA to the complete application firmware, without having to reconnect it via USB.
 
-Elementi tecnici principali:
-- Watchdog hardware task (`esp_task_wdt`), timeout 8 s, con `trigger_panic` attivo — se il loop si blocca, la scheda si resetta da sola.
-- Web server OTA (`WebServer` su porta 80) con autenticazione HTTP Basic.
-- Endpoint `/update` per upload del binario, gestito in streaming (`UPLOAD_FILE_START` / `WRITE` / `END` / `ABORTED`) con log di avanzamento su seriale.
-- Riavvio automatico (`ESP.restart()`) 1,5 s dopo il completamento dell'OTA.
+Main technical elements:
+- Hardware task watchdog (`esp_task_wdt`), 8 s timeout, with `trigger_panic` active — if the loop freezes, the board resets itself.
+- OTA web server (`WebServer` on port 80) with HTTP Basic authentication.
+- `/update` endpoint for binary upload, handled in streaming (`UPLOAD_FILE_START` / `WRITE` / `END` / `ABORTED`) with progress log on serial.
+- Automatic reboot (`ESP.restart()`) 1.5 s after OTA completion.
 
 ### 7.2 `Master_ID.h`
-Definisce l'identità del master sulla rete e i parametri di rete/console:
-- `MASTER_ID` — fisso a `1` (gli slave usano 2–9, max 8 slave in rete).
-- SSID / password dell'Access Point del master.
-- IP statico, gateway, subnet dell'AP.
-- Porta TCP applicativa, porta e password della console Telnet diagnostica.
-- Porta, utente e password del web server OTA.
-- `NUM_SLAVES`, `FIRST_SLAVE_ID` — numero e primo ID degli slave attesi in rete.
-- Un promemoria empirico sulle misure di livello del segnale radio (es. a 30 cm circa −33 dB, a 7 m circa −85/−92 dB), utile per capire i limiti della portata dell'AP in fase di progettazione dell'impianto.
+Defines the master's identity on the network and the network/console parameters:
+- `MASTER_ID` — fixed at `1` (slaves use 2–9, max 8 slaves on the network).
+- SSID / password of the master's Access Point.
+- Static IP, gateway, subnet of the AP.
+- Application TCP port, Telnet diagnostic console port and password.
+- OTA web server port, user, and password.
+- `NUM_SLAVES`, `FIRST_SLAVE_ID` — number and first ID of the expected slaves on the network.
+- An empirical reminder on radio signal level measurements (e.g. at 30 cm about −33 dB, at 7 m about −85/−92 dB), useful to understand the AP range limits during system design.
 
-NOTA BENE: questo file non è accessibile, ma contenuto nel file .bin .
+PLEASE NOTE: this file is not accessible, but contained in the .bin file.
 
-### 7.3 `Scelta dei parametri SSID e PASSWORD WiFi`
-- Il nome della rete locale (SSID) e della password WiFi desiderate devono essere richieste all'indirizzo register@realmeteo.com , unitamente al MAC Address della scheda ESP32-C3, leggibile dal menù di servizio con il comando 6.
-- Questi parametri (SSID e PASSWORD) dovranno essere riportati identici sul file Slave_ID.h prima di programmare i moduli SLAVE (WEMOS LIOLIN D1), editando queste due linee
-- const char* WIFI_SSID = "NOME-DESIDERATO-RETE-WIFI";
-- const char* WIFI_PASS = "PASSWORD-WIFI";
+### 7.3 `Choice of WiFi SSID and PASSWORD Parameters`
+- The desired local network name (SSID) and WiFi password must be requested at the address register@realmeteo.com, together with the MAC Address of the ESP32-C3 board, readable from the service menu with command 6.
+- These parameters (SSID and PASSWORD) must be reported identically in the Slave_ID.h file before programming the SLAVE modules (WEMOS LOLIN D1), by editing these two lines
+- const char* WIFI_SSID = "DESIRED-WIFI-NETWORK-NAME";
+- const char* WIFI_PASS = "WIFI-PASSWORD";
 
-### 7.4 `Nota tecnica: partitions.csv`
-Tabella di partizionamento flash ESP32-c3, schema **OTA dual-app** (necessario per gli aggiornamenti OTA sicuri, con rollback):
+### 7.4 `Technical Note: partitions.csv`
+ESP32-c3 flash partitioning table, **OTA dual-app** scheme (necessary for safe OTA updates, with rollback):
 
-| Nome | Tipo | Sub-tipo | Offset | Dimensione |
+| Name | Type | Sub-type | Offset | Size |
 |---|---|---|---|---|
 | `nvs` | data | nvs | `0x9000` | 20 KB |
 | `otadata` | data | ota | `0xe000` | 8 KB |
@@ -276,60 +278,60 @@ Tabella di partizionamento flash ESP32-c3, schema **OTA dual-app** (necessario p
 | `app1` | app | ota_1 | — | 1900 KB |
 | `coredump` | data | coredump | — | 128 KB |
 
-Due slot applicativi (`app0`/`app1`) da 1900 KB ciascuno permettono all'OTA di scrivere il nuovo firmware nello slot inattivo e passare a quello solo dopo un upload riuscito, mantenendo la possibilità di tornare al firmware precedente in caso di problemi. La partizione `coredump` conserva un dump in caso di crash per facilitare il debug.
+Two application slots (`app0`/`app1`) of 1900 KB each allow the OTA to write the new firmware to the inactive slot and switch to it only after a successful upload, maintaining the possibility of returning to the previous firmware in case of problems. The `coredump` partition stores a dump in case of crash to facilitate debugging.
 
 ---
 
-## 8. Riprodurre il progetto: cosa serve
+## 8. Reproducing the Project: What is Needed
 
 **Hardware:**
-- Scheda ESP32‐C3 con display OLED da 0,42 pollici WiFi Bluetooth
+- ESP32‐C3 board with 0.42-inch OLED display WiFi Bluetooth
 - PCB
--Relè
-- Sensori PIR e schede slave D1 dedicate (una per ogni punto da monitorare)
-- 2 LED (bordo + ausiliario su GPIO 9)
-- 2 ponticelli/pulsanti verso GND su GPIO 4 e GPIO 10
+- Relay
+- PIR sensors and dedicated D1 slave boards (one for each point to monitor)
+- 2 LEDs (edge + auxiliary on GPIO 9)
+- 2 jumpers/buttons to GND on GPIO 4 and GPIO 10
 
-![ESP32-C3](img/ESP32-C3.png) 
+![ESP32-C3](img/ESP32-C3.png)
 
 
 **Toolchain:**
-- Arduino IDE con core ESP32 installato ed impostazione del file "http://arduino.esp8266.com/stable/package_esp8266com_index.json" nelle preferenze
-- Librerie: `WiFi.h`, `WebServer.h`, `Update.h`, `esp_task_wdt.h` (incluse nel core ESP32, nessuna installazione aggiuntiva richiesta)
+- Arduino IDE with ESP32 core installed and setting of the file "http://arduino.esp8266.com/stable/package_esp8266com_index.json" in preferences
+- Libraries: `WiFi.h`, `WebServer.h`, `Update.h`, `esp_task_wdt.h` (included in the ESP32 core, no additional installation required)
 
 
-**Programmazione scheda MASTER:**
-0. Scaricare tutti i files presenti nella cartella firmware, copiandoli in una cartella nota sul nostro pc.
-0.1 Opzionale ma preferibile: Smontare la scheda ESP32 C3 dalla board e connetterla al pc tramite il cavetto USB
-1. Su Arduino IDE2 , impostare quanto segue: 
-1.1 File->Preferences-> Additional board manager url-> http://arduino.esp8266.com/stable/package_esp8266com_index.jsonze 
+**MASTER Board Programming:**
+0. Download all the files present in the firmware folder, copying them to a known folder on your PC.
+0.1 Optional but preferable: Remove the ESP32-C3 board from the board and connect it to the PC via the USB cable
+1. In Arduino IDE2, set the following:
+1.1 File->Preferences-> Additional board manager url-> http://arduino.esp8266.com/stable/package_esp8266com_index.json
 1.2 Board "ESP32‐C3 Dev Module"
 1.3 Tools-> Erase all flash before upload ->Enabled
-1.4 Tools-> USB CDC on boot -> Enabled 
-2. Aprire lo sketch "4MASTER32_startup_02_88888888.ino" e caricarlo su una scheda ESP32C3 (meglio se con display OLED da 0,42 pollici).
-2.1 Verificare da terminale seriale a 115200 baud il seguente messaggio:  =========================================
-SoftAP avviato - SSID: 88888888
-IP per aggiornamento OTA: http://192.168.4.1
+1.4 Tools-> USB CDC on boot -> Enabled
+2. Open the sketch "4MASTER32_startup_02_88888888.ino" and upload it to an ESP32C3 board (preferably with 0.42-inch OLED display).
+2.1 Verify from the serial terminal at 115200 baud the following message:  =========================================
+SoftAP started - SSID: 88888888
+IP for OTA update: http://192.168.4.1
 =========================================
-eseguire aggiornamento OTA
+perform OTA update
 
-3. Verificare con il PC che tra le altre reti WiFi ci sia anche la rete con SSID = **88888888** (si legge INTERNET NON DISPONIBILE). 
-4. Scollegare il PC dalla rete wifi del vostro router e collegare la rete con SSID 88888888 usando password 88888888
-5. Sul browser del pc digitare il seguente indirizzo (opzionalmente lasciare il monitor seriale attivo) http://192.168.4.1/update   (attenzione, non https) 
-5.1 Verrà richiesto di autenticarsi: user 'admin' password 'Pautax2006' 
-6. Con sfoglia/browse cercare il file 4MASTER32_displ_pir_wdog_100.bin (N.B. 100 è la versione, potreste anche trovare un upgrade con altro numero) .
-6.1 Programmare la scheda con il pulsante 'Carica Firmware'
-6.2 sul terminae seriale si legge:
-OTA: Upload firmware avviato.
+3. Verify with the PC that among the other WiFi networks there is also the network with SSID = **88888888** (it reads INTERNET NOT AVAILABLE).
+4. Disconnect the PC from your router's WiFi network and connect to the network with SSID 88888888 using password 88888888
+5. In the PC browser type the following address (optionally leave the serial monitor active) http://192.168.4.1/update   (attention, not https)
+5.1 You will be asked to authenticate: user 'admin' password 'Pautax2006'
+6. With browse search for the file 4MASTER32_displ_pir_wdog_100.bin (N.B. 100 is the version, you might also find an upgrade with another number).
+6.1 Program the board with the 'Upload Firmware' button
+6.2 on the serial terminal you read:
+OTA: Firmware upload started.
 OTA: File = 4MASTER32_displ_pir_wdog_100.ino.bin
-OTA: Upload completato. Byte ricevuti: 1072240
-OTA: aggiornamento completato. Riavvio in corso...
-eseguire aggiornamento OTA
-Riavvio dispositivo in corso...
-6.3 sul browser si legge: **Aggiornamento completato. Il master si riavvia.**
+OTA: Upload completed. Bytes received: 1072240
+OTA: update completed. Restarting...
+perform OTA update
+Device restart in progress...
+6.3 on the browser you read: **Update completed. The master is restarting.**
 
 ---
 
 ## 9. PCB
 
-- I PCB per montare schede MASTER e SLAVE sono in sviluppo e verranno distribuiti a `prezzo di costo`, se sei interessato prenotati.
+- The PCBs for mounting MASTER and SLAVE boards are under development and will be distributed at `cost price`, if you are interested book them.
