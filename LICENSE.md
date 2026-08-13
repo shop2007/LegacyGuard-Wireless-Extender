@@ -1,27 +1,24 @@
 # Terms of License & Commercial Distribution
 
-### 1. Version Demo / Evaluation (Gratuita)
-* I sorgenti, gli schemi e i binari forniti in questa repository sono distribuiti per consentire la replicazione del progetto in modalità DIY.
-* Il firmware in versione Demo contiene una limitazione temporale integrata: **il sistema resta operativo per 1 ora a partire dall'ultimo reset hardware/software**.
-* Trascorsa 1 ora, il sistema arresta le sue funzioni fino al successivo reset.
-* È vietata la rimozione o la bypass delle limitazioni temporali presenti nel codice sorgente.
+### 1. Demo / Evaluation Version (Free)
+* The sources, schematics and binaries provided in this repository are distributed to allow replication of the project in DIY mode.
+* The Demo version of the firmware contains a built-in time limitation: **the system remains operational for 1 hour starting from the last hardware/software reset**.
+* After 1 hour has elapsed, the system stops its functions until the next reset.
+* Removal or bypass of the time limitations present in the source code is prohibited.
 
-### 2. Licenza Full / Produzione
-Per sbloccare il funzionamento illimitato (senza time-out) e ricevere i firmware aggiornati per uso continuo:
-* È richiesto una unica donazione di **€25,00 a sistema** a favore della Associazione Realmeteo tramite paypal all'indirizzo indicato di seguito con la casuale "Donazione Liberale Associazione realMeteo per ricevere il firmware LegacyGuard Wireless Extender della scheda master, sbloccato".
-* La licenza Full include:
-  * Firmware senza limitazioni temporali.
-  * Accesso agli aggiornamenti e alle nuove release del firmware.
-  * Supporto via email per la configurazione iniziale.
+### 2. Full / Production License
+To unlock unlimited operation (without time-out) and receive updated firmware for continuous use:
+* A one-time donation of **€25.00 per system** is required in favour of the Realmeteo Association via PayPal to the address indicated below, with the reason "Liberal Donation to the realMeteo Association to receive the unlocked LegacyGuard Wireless Extender master board firmware".
+* The Full license includes:
+  * Firmware without time limitations.
+  * Access to updates and new firmware releases.
+  * Email support for initial configuration.
   
-**NOTA BENE** questo è un progetto sperimentale, nato per studio e sperimentazione personale, e non un prodotto commerciale collaudato. Non viene fornita alcuna garanzia sul suo corretto funzionamento: va inteso come un progetto didattico per maker, non come un sistema di sicurezza certificato. Chi lo riproduce lo fa quindi a proprio rischio, esonerando l'autore da qualsiasi responsabilità per falsi allarmi, malfunzionamenti o altri problemi che possano derivarne — riproducendo il progetto si dichiara di essere consapevole di questi limiti e di accettarne rischi e conseguenze.
+**PLEASE NOTE** this is an experimental project, created for personal study and experimentation, and not a tested commercial product. No warranty is provided regarding its correct operation: it is to be understood as an educational project for makers, not as a certified security system. Anyone who reproduces it therefore does so at their own risk, releasing the author from any liability for false alarms, malfunctions or other problems that may arise from it — by reproducing the project you declare that you are aware of these limitations and accept the related risks and consequences.
 
-
-  
-
-### 3. Come richiedere la Licenza Full
-Per fare la donazione o richiedere informazioni, inviare una mail a: **[register@realmeteo.com]** indicando:
-- il MAC address del modulo MASTER (rilevabile da seriale o da telnet con il comando **m** e poi **6**)
-- il nome della rete wifi ssid desiderato (esempio WIND-FFER44)
-- la password wifi desiderata
-- la password telnet desiderata
+### 3. How to request the Full License
+To make the donation or request information, send an email to: **[register@realmeteo.com]** indicating:
+- the MAC address of the MASTER module (detectable via serial or telnet with the command **m** and then **6**)
+- the desired Wi-Fi network SSID name (example: WIND-FFER44)
+- the desired Wi-Fi password
+- the desired Telnet password
