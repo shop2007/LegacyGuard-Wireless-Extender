@@ -27,3 +27,6 @@ It is useful for adding PIR sensors to older-generation wired alarm systems with
 | IP: 192.168.4.2  |                           | IP: 192.168.4.x  |
 +------------------+                           +------------------+
 ```
+
+link
+- [master board ita](https://github.com/shop2007/LegacyGuard-Wireless-Extender/blob/main/master-board%2Fdocs%2Freadme_master_board_ITALIANO.md)
