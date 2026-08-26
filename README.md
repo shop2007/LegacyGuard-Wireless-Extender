@@ -29,4 +29,4 @@ It is useful for adding PIR sensors to older-generation wired alarm systems with
 ```
 
 link
-- [master board ita](https://github.com/shop2007/LegacyGuard-Wireless-Extender/blob/main/master-board%2Fdocs%2Freadme_master_board_ITALIANO.md)
+- [master board ](https://github.com/shop2007/LegacyGuard-Wireless-Extender/tree/main/master-board)
